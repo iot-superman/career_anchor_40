@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>職涯錨定 8 大類型｜40 題線上測驗</title>
+
+  <!-- Bootstrap 5：僅負責 UI，所有資料與計算都在瀏覽器本機執行 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    :root { --app-max: 980px; }
+    body { background:#f4f6f9; }
+    .app-shell { max-width:var(--app-max); }
+    .question-card { scroll-margin-top:80px; }
+    .question-no {
+      width:2.4rem;height:2.4rem;display:inline-flex;align-items:center;justify-content:center;
+      border-radius:50%;font-weight:700;background:#0d6efd;color:#fff;flex:0 0 auto;
+    }
+    .choice-label { min-width:4.5rem; }
+    .sticky-progress { position:sticky;top:0;z-index:1020;background:rgba(244,246,249,.96);backdrop-filter:blur(8px); }
+    .score-badge { min-width:3.6rem; }
+    .result-card { border-left:5px solid #0d6efd; }
+    .rank-1 { background:#fff3cd !important; }
+    .analysis-box { white-space:pre-line; line-height:1.8; }
+    @media print {
+      .no-print,.sticky-progress,#quizSection { display:none !important; }
+      body { background:#fff; }
+      #resultSection { display:block !important; }
+      .container { max-width:none !important; }
+    }
+  
+/* ===== V2 手寫答案卷 PDF ===== */
+#handPdf{position:fixed;left:-20000px;top:0;width:794px;background:#fdfcf8;color:#111;font-family:"PMingLiU","MingLiU",serif}
+.paper{width:794px;height:1123px;box-sizing:border-box;padding:30px 28px;background:#fdfcf8;border:1px solid #aaa}
+.paper-title{text-align:center;font-size:40px;font-weight:700;letter-spacing:8px;margin:0 0 10px}
+.paper-date{text-align:right;font-size:17px;margin:-45px 4px 22px}
+.hw{color:#1237b5;font-family:"Comic Sans MS","Segoe Print",cursive;font-size:22px;font-style:italic;display:inline-block;transform:rotate(-2deg)}
+.sheet{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}
+.sheet th,.sheet td{border:1px solid #222;text-align:center;padding:5px 2px;height:42px}
+.sheet th{height:62px;background:#eef4f8;font-size:16px}
+.sheet .total{color:#d21b1b;font-family:"Comic Sans MS","Segoe Print",cursive;font-size:23px;font-style:italic}
+.rank-sheet{width:100%;border-collapse:collapse;table-layout:fixed;font-size:16px}
+.rank-sheet th,.rank-sheet td{border:1px solid #222;text-align:center;height:35px}
+.rank-sheet th{background:#fff6dc}
+.rank-sheet td{color:#1237b5;font-family:"Comic Sans MS","Segoe Print",cursive;font-size:21px;font-style:italic}
+.instruction{font-size:16px;font-weight:600;margin:17px 2px 10px}
+.analysis-paper h2{text-align:center;font-size:28px;margin:0 0 18px}
+.analysis-paper h3{font-size:19px;border-bottom:2px solid #333;padding-bottom:5px;margin:18px 0 8px}
+.analysis-paper p{font-size:14px;line-height:1.75;margin:7px 0}
+.analysis-table{width:100%;border-collapse:collapse;font-size:13px}
+.analysis-table th,.analysis-table td{border:1px solid #555;padding:6px;text-align:center}
+.analysis-table th{background:#eee}
+
+</style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-primary shadow-sm no-print">
+  <div class="container app-shell">
+    <span class="navbar-brand mb-0 h1">職涯錨定 8 大類型｜40 題 V3・雷達圖</span>
+    <span class="badge text-bg-light">純前端 HTML5</span>
+  </div>
+</nav>
+
+<div class="sticky-progress py-2 no-print">
+  <div class="container app-shell">
+    <div class="d-flex justify-content-between small mb-1">
+      <span id="progressText">已完成 0 / 40 題</span>
+      <span id="saveState">尚未作答</span>
+    </div>
+    <div class="progress" role="progressbar" aria-label="答題進度">
+      <div id="progressBar" class="progress-bar" style="width:0%">0%</div>
+    </div>
+  </div>
+</div>
+
+<main class="container app-shell py-4">
+  <section class="card shadow-sm mb-4 no-print">
+    <div class="card-body">
+      <h1 class="h3">職涯錨定（Career Anchors）自我評估</h1>
+      <p class="mb-2">請依照每一敘述對你的符合程度作答：1 從未、2 偶爾、3 常常、4 總是。這是自我探索工具，不是能力測驗，也沒有標準答案。</p>
+      <div class="row g-2">
+        <div class="col-md-5">
+          <label for="testerName" class="form-label">姓名／代號（選填）</label>
+          <input id="testerName" class="form-control" placeholder="例如 Alex">
+        </div>
+        <div class="col-md-4">
+          <label for="testDate" class="form-label">施測日期</label>
+          <input id="testDate" type="date" class="form-control">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="quizSection"></section>
+
+  <div class="d-grid gap-2 d-md-flex justify-content-md-center my-4 no-print">
+    <button id="calculateBtn" class="btn btn-primary btn-lg px-5">計算結果與分析</button>
+    <button id="saveJsonBtn" class="btn btn-outline-secondary">存檔 JSON</button>
+    <label class="btn btn-outline-secondary mb-0">
+      讀取 JSON<input id="loadJsonInput" type="file" accept=".json,application/json" hidden>
+    </label>
+    <button id="clearBtn" class="btn btn-outline-danger">清除全部</button>
+  </div>
+
+  <section id="resultSection" class="d-none">
+    <div id="pdfArea">
+      <div class="card shadow-sm mb-4 result-card">
+        <div class="card-body">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+              <h2 class="h3 mb-1">測驗結果</h2>
+              <div id="resultMeta" class="text-secondary"></div>
+            </div>
+            <div class="no-print">
+              <button id="exportPdfBtn" class="btn btn-success">匯出手寫卷 PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h3 class="h5">八大類型分數與名次</h3>
+          <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+              <thead>
+                <tr><th>名次</th><th>代碼</th><th>類型</th><th>英文</th><th>分數</th></tr>
+              </thead>
+              <tbody id="scoreTableBody"></tbody>
+            </table>
+          </div>
+          <p class="small text-secondary mb-0">同分採「同分同名次、不跳號」：例如 18、18、17、17 的名次為 1、1、2、2。</p>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4"><div class="card-body"><h3 class="h5">八大職涯錨雷達圖</h3><div style="max-width:680px;height:520px;margin:auto"><canvas id="radarChart"></canvas></div></div></div>
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h3 class="h5">結果分析</h3>
+          <div id="analysisText" class="analysis-box"></div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h3 class="h5">各類型原始題目與得分</h3>
+          <div id="detailAccordion" class="accordion"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="handPdf" aria-hidden="true">
+  <section id="pdfAnswer" class="paper"></section>
+  <section id="pdfAnalysis" class="paper analysis-paper"></section>
+</div>
+
+<footer class="container app-shell pb-5 text-secondary small">
+  本頁所有作答、計分、JSON 匯入／匯出皆在瀏覽器端執行；PDF 由瀏覽器端 JavaScript 產生。
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+
+<script>
+"use strict";
+
+/* =========================================================
+   40 題題庫
+   type 為計分類型：
+   TF 專家達人、GM 專業經理人、AU 自主工作者、SE 安穩可靠者、
+   EC 創造者、SV 俠客、CH 挑戰者、LS 樂活族
+   ========================================================= */
+const QUESTIONS = [
+  {id:1,type:"TF",text:"我希望自己在工作上的表現能好到讓別人總是會向我徵詢專業建議。"},
+  {id:2,type:"GM",text:"當我可以結合其他人的努力完成任務時，會讓我在工作中感到最滿足。"},
+  {id:3,type:"AU",text:"我夢想擁有一個能夠允許我自由地以自己的方式與進度規劃的職業生涯。"},
+  {id:4,type:"EC",text:"我總是在注意一些能夠開始擁有自己事業的想法。"},
+  {id:5,type:"SE",text:"我認為工作的穩定性比起自由與自主來得重要。"},
+  {id:6,type:"LS",text:"如果被安排到一個會影響到自己追求個人或家庭關懷的工作時，我寧願離開公司。"},
+  {id:7,type:"SV",text:"唯有感到自己對社會福祉有實質貢獻時，我才會認為自己的職涯是成功的。"},
+  {id:8,type:"CH",text:"我夢想擁有面對許多挑戰，甚至解決困難問題的職業生涯。"},
+  {id:9,type:"TF",text:"唯有當我的專業能力可以持續成長時，我才會感覺到自己的職涯是成功的。"},
+  {id:10,type:"GM",text:"我想要成為公司中的高階管理人員。"},
+  {id:11,type:"AU",text:"當我可以完全自由的規劃我的工作內容、進度與程序時，會讓我在工作中感到最滿足。"},
+  {id:12,type:"SE",text:"我不會留在一家會委派我去從事可能會讓自己丟掉工作的公司上班。"},
+  {id:13,type:"EC",text:"我認為成立一家自己擁有的公司，比在一家公司擔任高階管理職務還重要。"},
+  {id:14,type:"SV",text:"當我能運用自己的專業能力去服務他人時，我對自己的職涯感到最滿足。"},
+  {id:15,type:"CH",text:"唯有面對與克服越來越困難的挑戰，我才會感覺到自己的職涯是成功的。"},
+  {id:16,type:"LS",text:"我夢想擁有一個能夠整合我個人、家庭及工作需求的職涯。"},
+  {id:17,type:"TF",text:"對我而言，在公司內成為一位資深的專業人員比擔任高階主管更具吸引力。"},
+  {id:18,type:"AU",text:"唯有能夠完全自主或自由的規劃我的工作，我才感覺到我的職涯是成功的。"},
+  {id:19,type:"SE",text:"我通常會尋找可以讓我感到不會失去工作的安全感與穩定感的工作機會。"},
+  {id:20,type:"EC",text:"當我能夠藉由自己的技術與努力付出創建出某些東西，我才感覺到最滿足。"},
+  {id:21,type:"GM",text:"唯有當我成為公司高層的總經理或高階主管，我才感覺是職涯是成功的。"},
+  {id:22,type:"SV",text:"運用我的才能讓人們的生活更美好，是我職涯決策的動能。"},
+  {id:23,type:"CH",text:"當我有能力去解決一些很困難的問題，或贏得看似不可能成功的事情時，我才覺得自己的職涯是最滿足的。"},
+  {id:24,type:"LS",text:"唯有當自己有能力平衡個人、家庭及職涯的要求，我才會感覺自己的職涯是成功的。"},
+  {id:25,type:"SE",text:"我夢想擁有一個讓我感到工作穩定與不會任意變動的職涯。"},
+  {id:26,type:"TF",text:"如果要我離開原本專業領域的工作，我寧願離開公司。"},
+  {id:27,type:"LS",text:"我認為在工作上能平衡我個人事業和生活方式的需求，比在公司內擔任高階主管還重要。"},
+  {id:28,type:"SV",text:"我夢想過著對人類或社會有實質貢獻的職業生涯。"},
+  {id:29,type:"EC",text:"唯有當我創造出基於自己的想法和專業的企業，我才覺得職涯是成功的。"},
+  {id:30,type:"GM",text:"對我而言，成為總經理或高階主管比在專業領域中成為一位資深的專業人員更具吸引力。"},
+  {id:31,type:"AU",text:"有機會以自己的方式和自由的規範去工作，對我而言是最重要的。"},
+  {id:32,type:"CH",text:"我喜歡能夠強烈挑戰自己解決問題與職場競爭能力的工作機會。"},
+  {id:33,type:"EC",text:"我夢想開創屬於自己的事業。"},
+  {id:34,type:"SV",text:"如果必須接受一個會逐漸損害我服務他人能力的職位時，我寧願離開公司。"},
+  {id:35,type:"TF",text:"當我可以運用自己獨特的專業職能時，會使我在工作中感到最滿足。"},
+  {id:36,type:"GM",text:"如果必須接受一個會讓我遠離成為高階主管的工作時，我寧願離開公司。"},
+  {id:37,type:"SE",text:"當我感覺到自己擁有完全的財務及工作穩定感時，會使我在工作中最滿足。"},
+  {id:38,type:"AU",text:"我寧願離開公司也不願接受一份會降低我的自由與自主性的工作。"},
+  {id:39,type:"LS",text:"我總是尋找對自己及家庭關係造成最小影響的工作機會。"},
+  {id:40,type:"CH",text:"對我而言，處理難以解決的問題比起獲得高階管理職務來得重要。"}
+];
+
+const TYPES = {
+  TF:{name:"專家達人",en:"Technical / Functional Competence",keywords:"學習、成長、專業深度",desc:"你重視專業能力的累積與精進，希望因為真正擅長某個領域而獲得成就感。適合能持續深化技術、知識或專業判斷的工作。"},
+  GM:{name:"專業經理人",en:"General Managerial Competence",keywords:"管理、整合、影響力",desc:"你重視整合人力與資源、承擔責任、影響組織結果。若分數高，管理職、跨部門協調與決策責任可能帶來較高滿足感。"},
+  AU:{name:"自主工作者",en:"Autonomy / Independence",keywords:"自由、自主、掌控方式",desc:"你重視工作方法、節奏與決策的自主權。過度僵化、層層限制的環境可能降低滿足感。"},
+  SE:{name:"安穩可靠者",en:"Security / Stability",keywords:"安全、穩定、可預期",desc:"你重視工作與財務的穩定、組織制度及可預期性。長期不確定或高風險環境可能較不符合你的核心需求。"},
+  EC:{name:"創造者",en:"Entrepreneurial Creativity",keywords:"創新、創造、成就",desc:"你重視把自己的想法變成具體成果，包含產品、服務、制度或事業。從零到一與創造成果容易帶來成就感。"},
+  SV:{name:"俠客",en:"Service / Dedication to a Cause",keywords:"服務、利他、價值",desc:"你重視工作的意義與對他人、社會或某項理念的貢獻。若分數高，使命感往往會直接影響職涯選擇。"},
+  CH:{name:"挑戰者",en:"Pure Challenge",keywords:"挑戰、競爭、超越",desc:"你享受解決困難問題、突破限制與克服競爭。過於例行、缺乏難度的工作可能較難長期維持動力。"},
+  LS:{name:"樂活族",en:"Lifestyle",keywords:"整合、平衡、生活",desc:"你重視工作、家庭與個人生活的整合。若分數高，職涯安排能否配合整體生活方式，通常比單一職稱更重要。"}
+};
+
+const quizSection = document.getElementById("quizSection");
+
+/* 建立 40 題 Bootstrap 卡片 */
+function renderQuestions() {
+  quizSection.innerHTML = QUESTIONS.map(q => `
+    <article class="card shadow-sm mb-3 question-card" id="qcard-${q.id}">
+      <div class="card-body">
+        <div class="d-flex gap-3 align-items-start mb-3">
+          <span class="question-no">${q.id}</span>
+          <div class="fs-5">${escapeHtml(q.text)}</div>
+        </div>
+        <div class="row g-2" role="radiogroup" aria-label="第 ${q.id} 題">
+          ${[1,2,3,4].map(v => `
+            <div class="col-6 col-md-3">
+              <input class="btn-check answer-radio" type="radio" name="q${q.id}" id="q${q.id}_${v}" value="${v}" autocomplete="off">
+              <label class="btn btn-outline-primary w-100 choice-label" for="q${q.id}_${v}">
+                <strong>${v}</strong><br><small>${["","從未","偶爾","常常","總是"][v]}</small>
+              </label>
+            </div>`).join("")}
+        </div>
+      </div>
+    </article>`).join("");
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+}
+
+function getAnswers() {
+  const answers = {};
+  QUESTIONS.forEach(q => {
+    const el = document.querySelector(`input[name="q${q.id}"]:checked`);
+    answers[q.id] = el ? Number(el.value) : null;
+  });
+  return answers;
+}
+
+function updateProgress() {
+  const answers = getAnswers();
+  const done = Object.values(answers).filter(v => v !== null).length;
+  const pct = Math.round(done / QUESTIONS.length * 100);
+  document.getElementById("progressText").textContent = `已完成 ${done} / ${QUESTIONS.length} 題`;
+  document.getElementById("progressBar").style.width = pct + "%";
+  document.getElementById("progressBar").textContent = pct + "%";
+  document.getElementById("saveState").textContent = done ? "作答中" : "尚未作答";
+}
+
+/* 計分：每類固定 5 題，最低 5 分、最高 20 分 */
+function calculateScores(answers) {
+  const scores = Object.fromEntries(Object.keys(TYPES).map(k => [k,0]));
+  QUESTIONS.forEach(q => scores[q.type] += Number(answers[q.id] || 0));
+  return scores;
+}
+
+/* 同分同名次且不跳號：dense ranking，例 18,18,17,17 => 1,1,2,2 */
+function buildRanking(scores) {
+  const rows = Object.entries(scores)
+    .map(([code,score]) => ({code,score,...TYPES[code]}))
+    .sort((a,b) => b.score - a.score || a.code.localeCompare(b.code));
+  let rank = 0, previous = null;
+  rows.forEach(row => {
+    if (row.score !== previous) rank++;
+    row.rank = rank;
+    previous = row.score;
+  });
+  return rows;
+}
+
+function generateAnalysis(ranking) {
+  const topScore = ranking[0].score;
+  const top = ranking.filter(x => x.score === topScore);
+  const secondScore = ranking.find(x => x.score < topScore)?.score;
+  const second = secondScore === undefined ? [] : ranking.filter(x => x.score === secondScore);
+  const lowScore = ranking[ranking.length - 1].score;
+  const low = ranking.filter(x => x.score === lowScore);
+
+  const topNames = top.map(x => `${x.code}「${x.name}」${x.score} 分`).join("、");
+  const secondNames = second.map(x => `${x.code}「${x.name}」${x.score} 分`).join("、");
+  const lowNames = low.map(x => `${x.code}「${x.name}」${x.score} 分`).join("、");
+
+  let text = `你的最高職涯錨為 ${topNames}。`;
+  if (top.length > 1) text += ` 最高分並列，表示這些價值在目前的職涯選擇中都很重要，不宜只用單一類型解讀。`;
+  text += `\n\n${top.map(x => `【${x.code} ${x.name}】${x.desc}`).join("\n\n")}`;
+
+  if (second.length) {
+    text += `\n\n第二層的重要傾向是 ${secondNames}。這些分數與最高分的差距，可用來判斷它們是否也是你選工作時的重要條件。`;
+  }
+
+  text += `\n\n相對最低為 ${lowNames}。低分只代表「與其他職涯價值相比優先度較低」，不表示你完全不重視這項價值。`;
+
+  const topKeywords = top.map(x => x.keywords).join("；");
+  text += `\n\n【實際選工作時可檢查】\n把最高分的核心條件轉成面試問題：${topKeywords}。比較職缺時，不只看薪資與職稱，也檢查工作內容、主管授權、組織穩定度、成長空間與生活安排是否符合你的高分職涯錨。`;
+
+  text += `\n\n本結果屬自我探索與職涯討論用途，不是心理診斷，也不應單獨作為錄用、淘汰或重大職涯決策的唯一依據。`;
+  return text;
+}
+
+function renderResult() {
+  const answers = getAnswers();
+  const missing = QUESTIONS.filter(q => answers[q.id] === null);
+  if (missing.length) {
+    alert(`尚有 ${missing.length} 題未作答：${missing.map(q=>q.id).join("、")}`);
+    document.getElementById(`qcard-${missing[0].id}`).scrollIntoView({behavior:"smooth"});
+    return;
+  }
+
+  const scores = calculateScores(answers);
+  const ranking = buildRanking(scores);
+
+  document.getElementById("scoreTableBody").innerHTML = ranking.map(r => `
+    <tr class="${r.rank===1 ? "rank-1" : ""}">
+      <td><span class="badge ${r.rank===1 ? "text-bg-warning" : "text-bg-secondary"} score-badge">第 ${r.rank} 名</span></td>
+      <td><strong>${r.code}</strong></td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.en)}</td>
+      <td><strong>${r.score}</strong> / 20</td>
+    </tr>`).join("");
+
+  const name = document.getElementById("testerName").value.trim();
+  const date = document.getElementById("testDate").value;
+  document.getElementById("resultMeta").textContent =
+    `${name ? "姓名／代號：" + name + "　" : ""}${date ? "施測日期：" + date : ""}`;
+
+  document.getElementById("analysisText").textContent = generateAnalysis(ranking);
+
+  document.getElementById("detailAccordion").innerHTML = ranking.map((r,i) => {
+    const qs = QUESTIONS.filter(q => q.type === r.code);
+    return `
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button ${i ? "collapsed" : ""}" type="button" data-bs-toggle="collapse" data-bs-target="#detail-${r.code}">
+            第 ${r.rank} 名｜${r.code} ${escapeHtml(r.name)}｜${r.score} 分
+          </button>
+        </h2>
+        <div id="detail-${r.code}" class="accordion-collapse collapse ${i===0 ? "show" : ""}">
+          <div class="accordion-body">
+            ${qs.map(q => `<div class="border-bottom py-2"><strong>${q.id}.</strong> ${escapeHtml(q.text)} <span class="badge text-bg-primary float-end">${answers[q.id]} 分</span></div>`).join("")}
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("resultSection").classList.remove("d-none");
+  renderScreenRadar(scores);
+  document.getElementById("resultSection").scrollIntoView({behavior:"smooth"});
+}
+
+/* JSON 存檔：保留版本、日期、姓名、40 題答案，以及當時計算結果 */
+function exportJson() {
+  const answers = getAnswers();
+  const scores = calculateScores(answers);
+  const data = {
+    schema:"career-anchor-40",
+    version:1,
+    exportedAt:new Date().toISOString(),
+    testerName:document.getElementById("testerName").value,
+    testDate:document.getElementById("testDate").value,
+    answers,
+    scores,
+    ranking:buildRanking(scores).map(({code,name,score,rank}) => ({code,name,score,rank}))
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json;charset=utf-8"});
+  downloadBlob(blob, `career_anchor_${data.testDate || "result"}.json`);
+}
+
+function importJson(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (data.schema !== "career-anchor-40" || !data.answers) throw new Error("不是本測驗的 JSON 格式");
+      document.getElementById("testerName").value = data.testerName || "";
+      document.getElementById("testDate").value = data.testDate || "";
+      QUESTIONS.forEach(q => {
+        const v = Number(data.answers[q.id]);
+        if ([1,2,3,4].includes(v)) {
+          const radio = document.getElementById(`q${q.id}_${v}`);
+          if (radio) radio.checked = true;
+        }
+      });
+      updateProgress();
+      renderResult();
+    } catch(err) {
+      alert("JSON 讀取失敗：" + err.message);
+    }
+  };
+  reader.readAsText(file, "utf-8");
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(a.href);
+  a.remove();
+}
+
+/* PDF 匯出：
+   html2canvas 將結果區轉成高解析 Canvas，
+   jsPDF 依 A4 比例自動分頁，不需伺服器。 */
+async function exportPdf() {
+  const btn = document.getElementById("exportPdfBtn");
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "產生 PDF 中…";
+  try {
+    // 展開所有明細，讓 PDF 可完整輸出
+    document.querySelectorAll("#detailAccordion .accordion-collapse").forEach(el => el.classList.add("show"));
+
+    const target = document.getElementById("pdfArea");
+    const canvas = await html2canvas(target, {
+      scale:2,
+      useCORS:true,
+      backgroundColor:"#ffffff",
+      windowWidth:target.scrollWidth
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF("p","mm","a4");
+    const pageW = 210, pageH = 297;
+    const margin = 8;
+    const usableW = pageW - margin*2;
+    const imgW = usableW;
+    const imgH = canvas.height * imgW / canvas.width;
+    const usableH = pageH - margin*2;
+
+    // 以裁切 Canvas 的方式分頁，避免單張超長圖片在 PDF 中被截斷
+    const pxPerMm = canvas.width / imgW;
+    const slicePxH = Math.floor(usableH * pxPerMm);
+    let y = 0, page = 0;
+
+    while (y < canvas.height) {
+      const h = Math.min(slicePxH, canvas.height - y);
+      const slice = document.createElement("canvas");
+      slice.width = canvas.width;
+      slice.height = h;
+      slice.getContext("2d").drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);
+      const dataUrl = slice.toDataURL("image/jpeg",0.95);
+      if (page > 0) pdf.addPage();
+      const sliceMmH = h / pxPerMm;
+      pdf.addImage(dataUrl,"JPEG",margin,margin,imgW,sliceMmH,undefined,"FAST");
+      y += h;
+      page++;
+    }
+
+    const date = document.getElementById("testDate").value || "result";
+    pdf.save(`career_anchor_${date}.pdf`);
+  } catch(err) {
+    alert("PDF 產生失敗：" + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+function clearAll() {
+  if (!confirm("確定要清除姓名、日期與全部 40 題作答嗎？")) return;
+  document.querySelectorAll(".answer-radio").forEach(x => x.checked = false);
+  document.getElementById("testerName").value = "";
+  document.getElementById("testDate").value = new Date().toISOString().slice(0,10);
+  document.getElementById("resultSection").classList.add("d-none");
+  updateProgress();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+renderQuestions();
+document.getElementById("testDate").value = new Date().toISOString().slice(0,10);
+document.addEventListener("change", e => { if (e.target.classList.contains("answer-radio")) updateProgress(); });
+document.getElementById("calculateBtn").addEventListener("click", renderResult);
+document.getElementById("saveJsonBtn").addEventListener("click", exportJson);
+document.getElementById("loadJsonInput").addEventListener("change", e => {
+  if (e.target.files?.[0]) importJson(e.target.files[0]);
+  e.target.value = "";
+});
+
+/* ===== V2：依老師答案卷題號排列，產生手寫卷 ===== */
+const PDF_TYPE_ORDER=["TF","GM","AU","SE","EC","SV","CH","LS"];
+
+function buildHandPdf(answers,ranking){
+  const groups={};
+  PDF_TYPE_ORDER.forEach(c=>groups[c]=QUESTIONS.filter(q=>q.type===c));
+  const scores=calculateScores(answers);
+  const name=document.getElementById("testerName").value.trim();
+  const date=document.getElementById("testDate").value;
+  let ry="",rm="",rd="";
+  if(date){
+    const p=date.split("-").map(Number);
+    ry=p[0]-1911; rm=p[1]; rd=p[2];
+  }
+
+  const heads=PDF_TYPE_ORDER.map(c=>`<th colspan="2">${c}<br><small>（${escapeHtml(TYPES[c].name)}）</small></th>`).join("");
+  let rows="";
+  for(let i=0;i<5;i++){
+    rows+="<tr>";
+    PDF_TYPE_ORDER.forEach(c=>{
+      const q=groups[c][i],deg=((q.id%5)-2)*0.8;
+      rows+=`<td>${q.id}</td><td><span class="hw" style="transform:rotate(${deg}deg)">${answers[q.id]}</span></td>`;
+    });
+    rows+="</tr>";
+  }
+  const totals=PDF_TYPE_ORDER.map(c=>`<td>合計</td><td class="total">${scores[c]}</td>`).join("");
+  const rankRows=ranking.map(r=>`<tr><td>${r.score}</td><td>${r.code}</td><td>${r.rank}</td></tr>`).join("");
+
+  document.getElementById("pdfAnswer").innerHTML=`
+    <div class="paper-title">答案卷</div>
+    <div class="paper-date">施測日期： <span class="hw">${ry||"　"}</span> 年 <span class="hw">${rm||"　"}</span> 月 <span class="hw">${rd||"　"}</span> 日</div>
+    ${name?`<div style="font-size:14px;margin-bottom:8px">姓名／代號：<span class="hw" style="font-size:18px">${escapeHtml(name)}</span></div>`:""}
+    <table class="sheet"><thead><tr>${heads}</tr></thead><tbody>${rows}<tr>${totals}</tr></tbody></table>
+    <div class="instruction">將合計後得出的八個分數依分數高低由高到低排列下來，<u>同分同名次</u>：</div>
+    <table class="rank-sheet"><thead><tr><th>分數從高到低</th><th>英文代碼</th><th>順位／名次</th></tr></thead><tbody>${rankRows}</tbody></table>
+    <div style="font-size:11px;color:#666;margin-top:12px">每類 5 題；各題 1～4 分；每類最高 20 分。名次採同分同名次、不跳號。</div>`;
+
+  const analysis=generateAnalysis(ranking);
+  document.getElementById("pdfAnalysis").innerHTML=`
+    <h2>職涯錨定 8 大類型－結果分析</h2>
+    <p>姓名／代號：${escapeHtml(name||"未填")}　　施測日期：${escapeHtml(date||"未填")}</p>
+    <h3>八大類型分數</h3>
+    <table class="analysis-table"><thead><tr><th>名次</th><th>代碼</th><th>類型</th><th>分數</th><th>核心價值</th></tr></thead><tbody>
+    ${ranking.map(r=>`<tr><td>${r.rank}</td><td>${r.code}</td><td>${escapeHtml(r.name)}</td><td>${r.score}/20</td><td>${escapeHtml(r.keywords)}</td></tr>`).join("")}
+    </tbody></table>
+    <h3>八大職涯錨雷達圖</h3><div style="width:560px;height:390px;margin:4px auto 12px"><canvas id="pdfRadarChart"></canvas></div>
+    <h3>完整分析</h3>
+    ${analysis.split("\n\n").map(x=>`<p>${escapeHtml(x).replace(/\n/g,"<br>")}</p>`).join("")}
+    <h3>結果說明</h3>
+    <p>本結果用於職涯自我探索。分數呈現八種職涯價值的相對強度，不是能力高低或心理診斷。</p>`;
+}
+
+async function domToPdfPage(pdf,el,newPage){
+  if(newPage) pdf.addPage("a4","p");
+  const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#fdfcf8",logging:false});
+  pdf.addImage(canvas.toDataURL("image/jpeg",0.96),"JPEG",0,0,210,297,undefined,"FAST");
+}
+
+let screenRadarChart=null, pdfRadarChart=null;
+function radarConfig(scores, animate){
+  return {type:"radar",data:{labels:PDF_TYPE_ORDER.map(c=>`${c} ${TYPES[c].name}`),datasets:[{label:"職涯錨分數",data:PDF_TYPE_ORDER.map(c=>scores[c]),borderWidth:2,pointRadius:4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,animation:animate,plugins:{legend:{position:"bottom"}},scales:{r:{min:0,max:20,ticks:{stepSize:5},pointLabels:{font:{size:13}}}}}};
+}
+function renderScreenRadar(scores){
+  const c=document.getElementById("radarChart"); if(!c||!window.Chart)return;
+  if(screenRadarChart)screenRadarChart.destroy();
+  screenRadarChart=new Chart(c.getContext("2d"),radarConfig(scores,true));
+}
+function renderPdfRadar(scores){
+  const c=document.getElementById("pdfRadarChart"); if(!c||!window.Chart)return;
+  if(pdfRadarChart)pdfRadarChart.destroy();
+  pdfRadarChart=new Chart(c.getContext("2d"),radarConfig(scores,false));
+}
+
+async function exportPdfV2(){
+  const answers=getAnswers();
+  const missing=QUESTIONS.filter(q=>answers[q.id]===null);
+  if(missing.length){alert(`尚有 ${missing.length} 題未作答：${missing.map(q=>q.id).join("、")}`);return;}
+  const ranking=buildRanking(calculateScores(answers));
+  buildHandPdf(answers,ranking);
+  renderPdfRadar(calculateScores(answers));
+
+  const btn=document.getElementById("exportPdfBtn"),old=btn.textContent;
+  btn.disabled=true; btn.textContent="產生手寫卷 PDF 中…";
+  try{
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:"p",unit:"mm",format:"a4",compress:true});
+    await domToPdfPage(pdf,document.getElementById("pdfAnswer"),false);
+    await domToPdfPage(pdf,document.getElementById("pdfAnalysis"),true);
+    const date=document.getElementById("testDate").value||"result";
+    pdf.save(`career_anchor_handwritten_${date}.pdf`);
+  }catch(e){console.error(e);alert("PDF 產生失敗："+e.message);}
+  finally{btn.disabled=false;btn.textContent=old;}
+}
+
+document.getElementById("exportPdfBtn").addEventListener("click", exportPdfV2);
+document.getElementById("clearBtn").addEventListener("click", clearAll);
+updateProgress();
+</script>
+</body>
+</html>
